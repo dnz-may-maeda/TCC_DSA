@@ -1,9 +1,12 @@
+# -*- coding: utf-8 -*-
 
 # Autor: Denise Mayumi Maeda
 # Objetivo: TCC - MBA em Data Science e Analytics USP/ESALQ
-# Tema: Aplicação de Modelo de Machine Learning para investigar a saúde mental de profissionais de TI
+# Tema: Aplicação de Modelos de Machine Learning para investigar a saúde mental de profissionais de TI
+# Fonte de dados:https://www.kaggle.com/datasets/osmi/mental-health-in-tech-2016
 
-# Instalação dos pacotes
+#%% Instalação dos pacotes
+
 !pip install pandas
 !pip install numpy
 !pip install -U seaborn
@@ -14,27 +17,29 @@
 !pip install scikit-learn
 !pip install statstests
 
-# Carregando os pacotes
+#%% Carregando os pacotes
 import pandas as pd # manipulação de dados em formato de dataframe
 import numpy as np # operações matemáticas
 import seaborn as sns # visualização gráfica
 import matplotlib.pyplot as plt # visualização gráfica
 import statsmodels.api as sm # estimação de modelos
-from sklearn.preprocessing import LabelEncoder # transformação de dados
 from statstests.process import stepwise # procedimento Stepwise
 from scipy import stats # utilizado na definição da função 'breusch_pagan_test'
 import statsmodels.formula.api as smf #estimação do modelo logístico binário
 from sklearn.metrics import roc_curve, auc # Função 'roc_curve' do pacote 'metrics' do sklearn
-from scipy.spatial.distance import pdist
-from sklearn.cluster import KMeans
-import plotly.express as px 
-import plotly.io as pio
-pio.renderers.default='browser'
 
 #%% Carregando o dataset
-DF_Saude_Mental_Full = pd.read_csv('C:\\Users\\deniz\\OneDrive\\Documentos\\Python Scripts\\TCC\\mental-heath-in-tech-2016_20161114.csv', sep=',')
-                  
+
+DF_Saude_Mental_Full = pd.read_csv('C:\\Users\\deniz\\OneDrive\\Documentos\\Python Scripts\\TCC\\mental-heath-in-tech-2016_20161114.csv', sep=',')                 
+
+#%% verificar nulos
+DF_Saude_Mental_Full.isna().sum()
+
+# Estatísticas univariadas
+DF_Saude_Mental_Full.describe()
+
 #%% Alterando os nomes das variáveis (Observar o De Para das Questões)
+
 DF_Saude_Mental_Full.rename(columns={ 'Are you self-employed?' : 'Q1'}, inplace=True)
 DF_Saude_Mental_Full.rename(columns={ 'How many employees does your company or organization have?' : 'Q2'}, inplace=True)
 DF_Saude_Mental_Full.rename(columns={ 'Is your employer primarily a tech company/organization?' : 'Q3'}, inplace=True)
@@ -99,20 +104,35 @@ DF_Saude_Mental_Full.rename(columns={ 'What US state or territory do you work in
 DF_Saude_Mental_Full.rename(columns={ 'Which of the following best describes your work position?' : 'Q62'}, inplace=True)
 DF_Saude_Mental_Full.rename(columns={ 'Do you work remotely?' : 'Q63'}, inplace=True)
 
-#%% ------- Seleção do público inicial
+#%% --------------------------------------------
+# Seleção do público inicial
+# ----------------------------------------------
+
+# Analisar as observações distintas das vvariáveis, exceto a idade. No excel
+
 DF_SM_Colunas_ = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q8', 'Q9', 'Q10', 'Q11', 'Q12', 'Q13', 'Q14', 'Q15', 'Q16', 'Q17', 'Q18', 'Q19', 'Q20', 'Q21', 'Q22', 'Q23', 'Q24', 'Q25', 'Q26', 'Q27', 'Q28', 'Q29', 'Q30', 'Q31', 'Q32', 'Q33', 'Q34', 'Q35', 'Q36', 'Q37', 'Q38', 'Q39', 'Q40', 'Q41', 'Q42', 'Q43', 'Q44', 'Q45', 'Q46', 'Q47', 'Q48', 'Q49', 'Q50', 'Q51', 'Q52', 'Q53', 'Q54', 'Q55', 'Q56', 'Q57', 'Q60', 'Q62', 'Q63','Q58', 'Q61', 'Q59']
 DF_SM_Colunas = DF_Saude_Mental_Full[DF_SM_Colunas_]
+
 DF_SM_Distinct = DF_SM_Colunas.drop_duplicates(subset=['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q8', 'Q9', 'Q10', 'Q11', 'Q12', 'Q13', 'Q14', 'Q15', 'Q16', 'Q17', 'Q18', 'Q19', 'Q20', 'Q21', 'Q22', 'Q23', 'Q24', 'Q25', 'Q26', 'Q27', 'Q28', 'Q29', 'Q30', 'Q31', 'Q32', 'Q33', 'Q34', 'Q35', 'Q36', 'Q37', 'Q38', 'Q39', 'Q40', 'Q41', 'Q42', 'Q43', 'Q44', 'Q45', 'Q46', 'Q47', 'Q48', 'Q49', 'Q50', 'Q51', 'Q52', 'Q53', 'Q54', 'Q55', 'Q57', 'Q58', 'Q59', 'Q60', 'Q61', 'Q62', 'Q63'], keep=False, inplace=False, ignore_index=False)
 
 # Salvando em excel
 DF_SM_Distinct.to_excel('C:\\Users\\deniz\\OneDrive\\Documentos\\Python Scripts\\TCC\\DF_SM_Distinct.xlsx', index=False)
 
-#%% --------- Tratando as variáveis a serem consideradas
+
+#%% -----------------------------------------
+# Tratando as variáveis a serem consideradas
+# --------------------------------------------
+
 DF_Saude_Mental_Full['Q4'].unique() 
+
+DF_Saude_Mental = DF_SM_Colunas.copy() 
 
 ## How many employees does your company or organization have?
 DF_Saude_Mental['Q2'].unique() 
+
+# Substituir 
 DF_Saude_Mental['Q2']  = DF_Saude_Mental['Q2'].str.replace('-', '_', regex=False)
+DF_Saude_Mental['Q2']  = DF_Saude_Mental['Q2'].str.replace(' ', '_', regex=False)
 
 ## Does your employer provide mental health benefits as part of healthcare coverage?
 DF_Saude_Mental['Q5'].unique() # ['Not eligible for coverage / N/A', 'No', nan, 'Yes', "I don't know"]
@@ -122,6 +142,7 @@ DF_Saude_Mental['Q5']  =   np.where(np.isin(DF_Saude_Mental['Q5'], [ 'Yes'])    
                            np.where(np.isin(DF_Saude_Mental['Q5'], [ 'I dont know'])                     , 'A3',
                            np.where(np.isin(DF_Saude_Mental['Q5'], [ 'Not eligible for coverage / N/A']) , 'A4',
                            np.nan))))
+
 
 ## Do you know the options for mental health care available under your employer-provided coverage?
 DF_Saude_Mental['Q6'].unique() #[nan, 'Yes', 'I am not sure', 'No'
@@ -287,7 +308,6 @@ DF_Saude_Mental['Q41']  =    np.where(np.isin(DF_Saude_Mental['Q41'], [ 'Yes, I 
                              np.where(np.isin(DF_Saude_Mental['Q41'], [ 'No, I dont think it would']), 'A4',
                              np.nan))))
 
-
 ## Do you think that team members/co-workers would view you more negatively if they knew you suffered from a mental health issue?
 DF_Saude_Mental['Q42'].unique()#"No, I don't think they would", 'Maybe', 'Yes, they do', 'Yes, I think they would', 'No, they do not'
 DF_Saude_Mental['Q42']  = DF_Saude_Mental['Q42'].str.replace("'", "", regex=False)
@@ -343,7 +363,7 @@ DF_Saude_Mental['Q48']  =  np.where(np.isin(DF_Saude_Mental['Q48'], [ 'Yes'])  ,
                            np.nan)))
 
 ## If yes, what condition(s) have you been diagnosed with?
-DF_Saude_Mental['Q49'].unique()
+DF_Saude_Mental['Q49'].unique()#
 DF_Saude_Mental['Q49'] = DF_Saude_Mental['Q49'].str.strip().str.lower()
 DF_Saude_Mental['Q49'] = np.where( DF_Saude_Mental['Q49'].str.contains('anxiety'          , case=False, na=False), 'Transtorno_Ansiedade', 
                          #np.where( DF_Saude_Mental['Q49'].str.contains('personality'      , case=False, na=False), 'Transtorno_Personalidade',
@@ -393,10 +413,13 @@ DF_Saude_Mental['Q50'] = np.where( DF_Saude_Mental['Q50'].str.contains('anxiety'
 
 ## Variavel em estudo, vaiável resposta: Q51 - Have you been diagnosed with a mental health condition by a medical professional?
 DF_Saude_Mental['Q51'].unique() ## Yes, No
+
 Diagnistico_Counts = DF_Saude_Mental['Q51'].value_counts()
+print(Diagnistico_Counts)
 
 ## Normalizar as entradas (tudo minúsculo e sem espaços extras)
 DF_Saude_Mental['Q51'] = DF_Saude_Mental['Q51'].str.strip().str.lower()
+#DF_Saude_Mental['Q51']  = {'yes': 1, 'no': 0}
 DF_Saude_Mental['Q51']  = np.where(np.isin(DF_Saude_Mental['Q51'], ['yes']), 1,
                           np.where(np.isin(DF_Saude_Mental['Q51'], ['no']) , 0,
                           np.nan))
@@ -428,14 +451,19 @@ DF_Saude_Mental['Q52'] = np.where( DF_Saude_Mental['Q52'].str.contains('anxiety'
 ## Have you ever sought treatment for a mental health issue from a mental health professional?
 DF_Saude_Mental['Q53'].unique()# 0, 1
 
-# --------What is your gender?
-DF_Saude_Mental['Q57'] = DF_Saude_Mental['Q57'].str.strip().str.lower() # Normalizar as entradas (tudo minúsculo e sem espaços extras)
-DF_Saude_Mental['Q57']  = DF_Saude_Mental['Q57'] .str.replace('.', '', regex=False) # Substituir o ponto por outro branco
-DF_Saude_Mental['Q57']  = DF_Saude_Mental['Q57'].str.replace("'", "", regex=False) # Removendo o apóstrofo
-DF_Saude_Mental['Q57']  = DF_Saude_Mental['Q57'] .str.replace('im a man why didnt you make this a drop down question you should of asked sex? and i would of answered yes please seriously how much text can this take?', 'm', regex=False) # Tratar exceção
+# ---- What is your gender?
+DF_Saude_Mental['Q57'].unique() 
+DF_Saude_Mental['Q57'] = DF_Saude_Mental['Q57'].str.strip().str.lower()
+DF_Saude_Mental['Q57']  = DF_Saude_Mental['Q57'] .str.replace('.', '', regex=False)
+DF_Saude_Mental['Q57']  = DF_Saude_Mental['Q57'].str.replace("'", "", regex=False)
+
+# Tratar exceção
+DF_Saude_Mental['Q57']  = DF_Saude_Mental['Q57'] .str.replace('im a man why didnt you make this a drop down question you should of asked sex? and i would of answered yes please seriously how much text can this take?', 'm', regex=False)
+
+# Criar Variável Sexo
 DF_Saude_Mental['Q57']  = np.where(np.isin(DF_Saude_Mental['Q57'], [ 'female', 'f', 'woman', 'fem', 'female/woman', 'cis-woman', 'cis female', 'cisgender female'])    , 'F',
                           np.where(np.isin(DF_Saude_Mental['Q57'], ['male', 'm', 'man', 'm|', 'sex is male', 'cis male',  'cis man', 'male (cis)', 'cisdude', 'dude']) , 'M',
-                          np.nan)) # Criar Variável Sexo
+                          np.nan))
 
 ## Which of the following best describes your work position?
 DF_Saude_Mental['Q62'].unique()
@@ -463,6 +491,16 @@ DF_Saude_Mental['Q63']  =   np.where(np.isin(DF_Saude_Mental['Q63'], [ 'Sometime
 
 #  What country do you work in?'
 DF_Saude_Mental['Q60']  = DF_Saude_Mental['Q60'].str.replace( " ", "_", regex=False)
+
+'''
+applymap(): Aplica a transformação em todas as células do DataFrame.
+lambda x: x.replace('.', '_') if isinstance(x, str) else x:
+Se a célula contém texto, substitui . por _.
+Se for número, mantém o valor original.
+
+DF_Saude_M_Dummie['Nome_da_Coluna'] = DF_Saude_M_Dummie['Nome_da_Coluna'].str.replace('.', '_', regex=True)
+
+'''
 
 #%%----- Análise com algumas variáveis
 
@@ -521,8 +559,8 @@ def Matriz_Confusao(predicts, observado, cutoff):
     cm = confusion_matrix(predicao_binaria, observado)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm)
     disp.plot()
-    plt.xlabel('True')
-    plt.ylabel('Classified')
+    plt.xlabel('True') # Valor verdadeiro
+    plt.ylabel('Classified') # Valor previsto
     plt.gca().invert_xaxis()
     plt.gca().invert_yaxis()
     plt.show()
@@ -609,7 +647,6 @@ plt.xticks(np.arange(0, 1.1, 0.2), fontsize=14)
 plt.yticks(np.arange(0, 1.1, 0.2), fontsize=14)
 plt.show()
 
-
 #%% ESTIMAÇÃO DO MODELO ARVORE DE DECISAO
 
 from sklearn.metrics import accuracy_score, classification_report, \
@@ -622,35 +659,10 @@ from sklearn.metrics import roc_auc_score
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.model_selection import GridSearchCV
 
-# ------------ What is your gender?
-DF_Saude_Mental_Full['Q57'].unique() 
-DF_Saude_Mental_Full['Q57'] = DF_Saude_Mental_Full['Q57'].str.strip().str.lower()
-DF_Saude_Mental_Full['Q57']  = DF_Saude_Mental_Full['Q57'] .str.replace('.', '', regex=False)
-DF_Saude_Mental_Full['Q57']  = DF_Saude_Mental_Full['Q57'].str.replace("'", "", regex=False)
-DF_Saude_Mental_Full['Q57']  = DF_Saude_Mental_Full['Q57'] .str.replace('im a man why didnt you make this a drop down question you should of asked sex? and i would of answered yes please seriously how much text can this take?', 'm', regex=False)
-DF_Saude_Mental_Full['Q57']  = np.where(np.isin(DF_Saude_Mental_Full['Q57'], [ 'female', 'f', 'woman', 'fem', 'female/woman', 'cis-woman', 'cis female', 'cisgender female'])    , 'F',
-                          np.where(np.isin(DF_Saude_Mental_Full['Q57'], ['male', 'm', 'man', 'm|', 'sex is male', 'cis male',  'cis man', 'male (cis)', 'cisdude', 'dude']) , 'M',
-                          np.nan))
-
-
-Variaveis2 = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q8', 'Q15', 'Q26', 'Q27', 'Q28', 'Q29', 'Q41', 'Q46', 'Q47', 'Q48', 'Q53', 'Q57', 'Q62', 'Q63']
-df_limpo = DF_Saude_Mental_Full[Variaveis2]    
-
-# Definir variável-alvo
-target = DF_Saude_Mental['Q51']
-
 # Separar X e y
-X = df_limpo
-y =target
+X = DF_Saude_M_Dummie2.drop(['Q51'], axis=1)
+y =DF_Saude_M_Dummie2['Q51']
 
-# Converter variáveis categóricas em dummies e Preencher NaNs com 0
-X_dummies = pd.get_dummies(df_limpo, dtype=int, drop_first=True)  
-X_dummies = X_dummies.fillna(0).astype(int)
-
-# Separar X e y
-X = X_dummies.drop('Q51', axis=1)
-y = X_dummies[target]
-y = y.iloc[:, 0]
 
 # Separar entre treino e teste
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
@@ -676,7 +688,7 @@ plt.grid(True)
 plt.show()   
 
 ## encontrar o melhor  max_depth
-depths = list(range(1, 21))  # Testar profundidades de 1 até 20
+depths = list(range(1, 11))  # Testar profundidades de 1 até 10
 acc_results = []
 
 for d in depths:
@@ -705,19 +717,19 @@ for d, acc in acc_results:
 Arvore_T = DecisionTreeClassifier(criterion='gini', 
                                   max_depth = 4, 
                                   random_state=42, 
-                                  ccp_alpha=0.010) 
-modelo.fit(X_train, y_train)
+                                  ccp_alpha=0.020) 
+Arvore_T.fit(X_train, y_train)
 
 # Definir a importancia das variáveis
-importancias = modelo.feature_importances_
+importancias = Arvore_T.feature_importances_
 importancias_df = pd.DataFrame({
     'Variável': X.columns,
     'Importância': importancias
 }).sort_values(by='Importância', ascending=False)
 
-# Apresentar top 5
-print("Top 5 variáveis mais importantes:")
-top_variaveis = importancias_df.head(5)
+# Apresentar top 3
+print("Top 3 variáveis mais importantes:")
+top_variaveis = importancias_df.head(3)
 print(f"{'Variável':<75} | {'Importância':>11}")
 print("-" * 90)
 for idx, row in top_variaveis.iterrows():
@@ -725,22 +737,22 @@ for idx, row in top_variaveis.iterrows():
     
 # Apresentar Gráfico
 importancias_df.head(10).plot(kind='barh', x='Variável', y='Importância', figsize=(10, 6), legend=False)
-plt.title('Top 5 Variáveis Mais Relevantes')
+plt.title('Top 3 Variáveis Mais Relevantes')
 plt.gca().invert_yaxis()
 plt.xlabel('Importância')
 plt.tight_layout()
 plt.show()
 
 #%% Rodando o modelo com as 5 melhores variaveis
- Top_ = importancias_df.head(5)['Variável'].tolist()
- df_modelo = X_dummies[Top_ + ['Q51']].copy()
+ Top_ = importancias_df.head(3)['Variável'].tolist()
+ df_modelo = DF_Saude_M_Dummie2[Top_ + ['Q51']].copy()
  
  df_modelo.dropna(inplace=True)
  
 ## Separar X e y
 X = df_modelo[Top_]
 y = df_modelo['Q51']
-y = y.iloc[:, 0]
+#y = y.iloc[:, 0]
 
  # Separar base em Treino e Teste, onde o tamanho para a base de teste será de: 25%
  X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.25, random_state=42)
@@ -755,7 +767,7 @@ y = y.iloc[:, 0]
 Arvore = DecisionTreeClassifier(criterion='gini', 
                                   max_depth = 4, 
                                   random_state=42, 
-                                  ccp_alpha=0.010) 
+                                  ccp_alpha=0.020) 
 
 # Treinar o modelo
 Arvore.fit(X_train, y_train)
@@ -772,12 +784,12 @@ plot_tree(Arvore,
           filled=True, 
           rounded=True, 
           fontsize=15)
-plt.title("Árvore de Decisão com as 10 Variáveis Mais Importantes", fontsize=22)
+plt.title("Árvore de Decisão com as 3 Variáveis Mais Importantes", fontsize=22)
 plt.show()
 
  #%% Função Avaliar o Modelo
   
-def Avalia_Mod(Mod, y, X, rótulos_y=['Nao Diagnosticado', 'Diagnosticdo'], base = 'treino'):
+def Avalia_Mod(Mod, y, X, base = 'treino'):
     
     # Calcular as classificações preditas
     Pred = Mod.predict(X)
@@ -802,9 +814,10 @@ def Avalia_Mod(Mod, y, X, rótulos_y=['Nao Diagnosticado', 'Diagnosticdo'], base
     
     # Visualização gráfica
     sns.heatmap(cm, 
-                annot=True, fmt='d', cmap='viridis', 
-                xticklabels=rótulos_y, 
-                yticklabels=rótulos_y)
+                annot=True, fmt='d', cmap='viridis')
+    
+    plt.xlabel('True')
+    plt.ylabel('Classified')
     
     # Relatório de classificação do Scikit
     print('\n', classification_report(y, Pred))
